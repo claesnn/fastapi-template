@@ -1,0 +1,82 @@
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Python bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Distribution / packaging
+.Python
+build/
+dist/
+downloads/
+eggs/
+.eggs/
+sdist/
+var/
+wheelhouse/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+MANIFEST
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# PyInstaller
+*.manifest
+*.spec
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+.coverage
+.coverage.*
+.cache
+.pytest_cache/
+pytest_cache/
+htmlcov/
+.tox/
+.nox/
+.hypothesis/
+*.cover
+*.py,cover
+nosetests.xml
+coverage.xml
+
+# Type checker cache
+.mypy_cache/
+.pytype/
+.ruff_cache/
+.pyre/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# IDEs and editors
+.idea/
+.vscode/
+*.swp
+*~
+
+# Logs
+*.log
+
+# Databases
+*.db
+*.db-journal
+*.sqlite3
+
+# macOS and Windows
+.DS_Store
+Thumbs.db
