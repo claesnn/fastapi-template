@@ -53,7 +53,8 @@ Asynchronous FastAPI starter that uses SQLAlchemy 2.0, Alembic migrations, and P
    ```pwsh
    fastapi dev
    ```
-3. Visit the interactive docs at `http://localhost:8000/docs` or the alternative schema at `http://localhost:8000/redoc`.
+3. The API enforces a simple bearer token check. Supply `Authorization: Bearer Nina` on every request (including Swagger “Authorize”) to avoid `403` responses.
+4. Visit the interactive docs at `http://localhost:8000/docs` or the alternative schema at `http://localhost:8000/redoc`.
 
 > **Note:** The included logging configuration emits ISO-timestamped JSON to stdout via Structlog.
 
@@ -115,6 +116,20 @@ Alembic loads the SQLAlchemy URL from `settings.db_url`, so keep `.env` in sync.
 - `DELETE /todos/{todo_id}` – Remove a todo
 
 Todos can optionally be linked to users via `user_id`, and the `TodoService` verifies the referenced user exists before insertion.
+
+### Pagination
+Collection endpoints accept `page` (default `1`) and `page_size` (default `20`, max `100`). Responses return a consistent envelope:
+
+```json
+{
+  "items": [...],
+  "total": 42,
+  "page": 1,
+  "page_size": 20
+}
+```
+
+Use `/todos/with-users` when you need eager-loaded user data alongside todos.
 
 ## Extending the Template
 

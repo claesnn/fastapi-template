@@ -9,6 +9,7 @@ Source code lives in `src/`, with the FastAPI entry point at `src/main.py` and s
 - `fastapi dev` runs the app with auto-reload using configuration from `.env`.
 - `alembic upgrade head` applies the latest migrations (run from `src/` so the env module resolves correctly).
 - `pytest -v` executes the async API tests; add `-k users` or `tests/test_todos.py` to focus on a feature.
+- Every request (including tests and docs) must include `Authorization: Bearer Nina`, otherwise the auth middleware returns `403`.
 
 ## Coding Style & Naming Conventions
 Follow PEP 8 with 4-space indentation, type hints on public functions, and `snake_case` for module, function, and variable names. Classes (including Pydantic models) use `PascalCase`, while routers and services stay `snake_case`. Keep async service calls awaited at the route layer and log structured messages through the shared `logger`. New feature folders should replicate the existing file layout and register routers in `main.py`.

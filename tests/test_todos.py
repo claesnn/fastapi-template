@@ -29,6 +29,21 @@ class TestTodoEndpoints:
         assert isinstance(data["id"], int)
 
     @pytest.mark.asyncio
+    async def test_create_todo_with_missing_user(self, client: AsyncClient):
+        """Creating a todo with a nonexistent user should surface 404."""
+        todo_data = {
+            "title": "Invalid User Todo",
+            "description": "This should fail",
+            "completed": False,
+            "user_id": 9999,
+        }
+
+        response = await client.post("/todos/", json=todo_data)
+
+        assert response.status_code == 404
+        assert response.json()["detail"] == "User not found"
+
+    @pytest.mark.asyncio
     async def test_get_todo(self, client: AsyncClient):
         """Test GET /todos/{todo_id} - Get a specific todo."""
         # First create a todo

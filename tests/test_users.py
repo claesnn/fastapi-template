@@ -1,7 +1,7 @@
 import pytest
 from httpx import AsyncClient
 
-from features.common.pagination import DEFAULT_PAGE_SIZE
+from features.common.pagination import DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE
 
 
 class TestUserEndpoints:
@@ -27,6 +27,23 @@ class TestUserEndpoints:
         assert data["is_active"] == user_data["is_active"]
         assert "id" in data
         assert isinstance(data["id"], int)
+
+    @pytest.mark.asyncio
+    async def test_create_user_conflict(self, client: AsyncClient):
+        """Creating two users with the same username/email should fail."""
+        user_data = {
+            "username": "dupeuser",
+            "email": "dupe@example.com",
+            "full_name": "Dup E",
+            "is_active": True,
+        }
+
+        first_response = await client.post("/users/", json=user_data)
+        assert first_response.status_code == 201
+
+        second_response = await client.post("/users/", json=user_data)
+        assert second_response.status_code == 400
+        assert second_response.json()["detail"] == "Username or email already exists"
 
     @pytest.mark.asyncio
     async def test_get_user(self, client: AsyncClient):
@@ -91,6 +108,12 @@ class TestUserEndpoints:
         usernames = [user["username"] for user in items]
         assert "listuser1" in usernames
         assert "listuser2" in usernames
+
+    @pytest.mark.asyncio
+    async def test_list_users_page_size_too_large(self, client: AsyncClient):
+        """Requesting a page size above the maximum should fail validation."""
+        response = await client.get(f"/users/?page_size={MAX_PAGE_SIZE + 1}")
+        assert response.status_code == 422
 
     @pytest.mark.asyncio
     async def test_update_user(self, client: AsyncClient):
