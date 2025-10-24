@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, status
 
-from features.common.pagination import PaginatedResponse, PaginationQuery
+from features.common.pagination import PaginatedResponse, PaginationQuery, paginate
 
 from .services import UserService, get_user_service
 from .schemas.base import UserCreate, UserRead, UserUpdate
@@ -30,12 +30,7 @@ async def list_users(
     user_service: UserService = Depends(get_user_service),
 ):
     users, total = await user_service.list(pagination)
-    return {
-        "items": users,
-        "total": total,
-        "page": pagination.page,
-        "page_size": pagination.page_size,
-    }
+    return paginate(users, total, pagination)
 
 
 @router.patch("/{user_id}", response_model=UserRead)
