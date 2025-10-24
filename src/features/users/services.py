@@ -2,9 +2,10 @@ from .models import User
 from .schemas.base import UserCreate, UserUpdate
 from database import get_db
 from fastapi import Depends, HTTPException
+from features.common.pagination import PaginationParams
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy import select
 
 
 class UserService:
@@ -33,10 +34,17 @@ class UserService:
 
         return user
 
-    async def list(self) -> list[User]:
-        result = await self.db.scalars(select(User))
+    async def list(self, pagination: PaginationParams) -> tuple[list[User], int]:
+        total = await self.db.scalar(select(func.count()).select_from(User)) or 0
+        query = (
+            select(User)
+            .order_by(User.id)
+            .offset(pagination.offset)
+            .limit(pagination.page_size)
+        )
+        result = await self.db.scalars(query)
         users = list(result)
-        return users
+        return users, int(total)
 
     async def update(self, user_id: int, user_update: UserUpdate) -> User:
         user = await self.get(user_id)

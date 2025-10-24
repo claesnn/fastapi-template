@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, status
 
+from features.common.pagination import PaginatedResponse, PaginationQuery
 from features.todos.schemas.relational import TodoReadWithUser
 from .services import TodoService, get_todo_service
 from .schemas.base import TodoCreate, TodoRead, TodoUpdate
@@ -15,11 +16,18 @@ async def create_todo(
     return await todo_service.create(todo_create)
 
 
-@router.get("/with-users", response_model=list[TodoReadWithUser])
+@router.get("/with-users", response_model=PaginatedResponse[TodoReadWithUser])
 async def list_todos_with_users(
+    pagination: PaginationQuery,
     todo_service: TodoService = Depends(get_todo_service),
 ):
-    return await todo_service.list_with_users()
+    todos, total = await todo_service.list_with_users(pagination)
+    return {
+        "items": todos,
+        "total": total,
+        "page": pagination.page,
+        "page_size": pagination.page_size,
+    }
 
 
 @router.get("/{todo_id}", response_model=TodoRead)
@@ -30,11 +38,18 @@ async def get_todo(
     return await todo_service.get(todo_id)
 
 
-@router.get("/", response_model=list[TodoRead])
+@router.get("/", response_model=PaginatedResponse[TodoRead])
 async def list_todos(
+    pagination: PaginationQuery,
     todo_service: TodoService = Depends(get_todo_service),
 ):
-    return await todo_service.list()
+    todos, total = await todo_service.list(pagination)
+    return {
+        "items": todos,
+        "total": total,
+        "page": pagination.page,
+        "page_size": pagination.page_size,
+    }
 
 
 @router.patch("/{todo_id}", response_model=TodoRead)

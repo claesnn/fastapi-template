@@ -4,7 +4,7 @@ from structlog.processors import JSONRenderer, TimeStamper
 
 
 configure(
-    wrapper_class=make_filtering_bound_logger(min_level="INFO"),
+    wrapper_class=make_filtering_bound_logger(min_level="DEBUG"),
     processors=[
         merge_contextvars,
         TimeStamper(fmt="iso"),

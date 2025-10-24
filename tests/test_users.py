@@ -1,6 +1,8 @@
 import pytest
 from httpx import AsyncClient
 
+from features.common.pagination import DEFAULT_PAGE_SIZE
+
 
 class TestUserEndpoints:
     """Test suite for user endpoints."""
@@ -78,11 +80,15 @@ class TestUserEndpoints:
 
         assert response.status_code == 200
         data = response.json()
-        assert isinstance(data, list)
-        assert len(data) >= 2  # At least the two we just created
+        assert isinstance(data, dict)
+        assert data["total"] >= 2  # At least the two we just created
+        assert data["page"] == 1
+        assert data["page_size"] == DEFAULT_PAGE_SIZE
+        items = data["items"]
+        assert isinstance(items, list)
 
         # Verify our users are in the list
-        usernames = [user["username"] for user in data]
+        usernames = [user["username"] for user in items]
         assert "listuser1" in usernames
         assert "listuser2" in usernames
 

@@ -32,8 +32,7 @@ class StructlogRequestMiddleware(BaseHTTPMiddleware):
         duration_ms = (time.perf_counter() - start_time) * 1000
         bind_contextvars(status_code=response.status_code, duration_ms=duration_ms)
         response.headers["x-request-id"] = request_id
-        if duration_ms > 1000:
-            await logger.ainfo("request completed slowly")
+        await logger.adebug("request completed")
         clear_contextvars()
         return response
 

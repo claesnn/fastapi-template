@@ -2,11 +2,12 @@ from .models import Todo
 from .schemas.base import TodoCreate, TodoUpdate
 from database import get_db
 from fastapi import Depends, HTTPException
-from sqlalchemy.ext.asyncio import AsyncSession
+from features.common.pagination import PaginationParams
 from features.users.services import UserService, get_user_service
-from sqlalchemy import select
-from sqlalchemy.orm import selectinload
 from logger import logger
+from sqlalchemy import func, select
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 
 class TodoService:
@@ -34,15 +35,32 @@ class TodoService:
 
         return todo
 
-    async def list(self) -> list[Todo]:
-        result = await self.db.scalars(select(Todo))
+    async def list(self, pagination: PaginationParams) -> tuple[list[Todo], int]:
+        total = await self.db.scalar(select(func.count()).select_from(Todo)) or 0
+        query = (
+            select(Todo)
+            .order_by(Todo.id)
+            .offset(pagination.offset)
+            .limit(pagination.page_size)
+        )
+        result = await self.db.scalars(query)
         todos = list(result)
-        return todos
+        return todos, int(total)
 
-    async def list_with_users(self) -> list[Todo]:
-        result = await self.db.scalars(select(Todo).options(selectinload(Todo.user)))
+    async def list_with_users(
+        self, pagination: PaginationParams
+    ) -> tuple[list[Todo], int]:
+        total = await self.db.scalar(select(func.count()).select_from(Todo)) or 0
+        query = (
+            select(Todo)
+            .options(selectinload(Todo.user))
+            .order_by(Todo.id)
+            .offset(pagination.offset)
+            .limit(pagination.page_size)
+        )
+        result = await self.db.scalars(query)
         todos = list(result)
-        return todos
+        return todos, int(total)
 
     async def update(self, todo_id: int, todo_update: TodoUpdate) -> Todo:
         todo = await self.get(todo_id)

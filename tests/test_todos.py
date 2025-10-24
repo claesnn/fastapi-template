@@ -1,6 +1,8 @@
 import pytest
 from httpx import AsyncClient
 
+from features.common.pagination import DEFAULT_PAGE_SIZE
+
 
 class TestTodoEndpoints:
     """Test suite for todo endpoints."""
@@ -78,11 +80,15 @@ class TestTodoEndpoints:
 
         assert response.status_code == 200
         data = response.json()
-        assert isinstance(data, list)
-        assert len(data) >= 2  # At least the two we just created
+        assert isinstance(data, dict)
+        assert data["total"] >= 2  # At least the two we just created
+        assert data["page"] == 1
+        assert data["page_size"] == DEFAULT_PAGE_SIZE
+        items = data["items"]
+        assert isinstance(items, list)
 
         # Verify our todos are in the list
-        titles = [todo["title"] for todo in data]
+        titles = [todo["title"] for todo in items]
         assert "First Todo" in titles
         assert "Second Todo" in titles
 
@@ -122,12 +128,16 @@ class TestTodoEndpoints:
 
         assert response.status_code == 200
         data = response.json()
-        assert isinstance(data, list)
-        assert len(data) >= 2
+        assert isinstance(data, dict)
+        assert data["total"] >= 2
+        assert data["page"] == 1
+        assert data["page_size"] == DEFAULT_PAGE_SIZE
+        items = data["items"]
+        assert isinstance(items, list)
 
         # Find the todo with user and verify user data is included
         user_todo = next(
-            (todo for todo in data if todo["title"] == "User's Todo"), None
+            (todo for todo in items if todo["title"] == "User's Todo"), None
         )
         assert user_todo is not None
         assert user_todo["user"] is not None
@@ -136,7 +146,7 @@ class TestTodoEndpoints:
 
         # Find the todo without user
         unassigned_todo = next(
-            (todo for todo in data if todo["title"] == "Unassigned Todo"), None
+            (todo for todo in items if todo["title"] == "Unassigned Todo"), None
         )
         assert unassigned_todo is not None
         assert unassigned_todo["user"] is None
