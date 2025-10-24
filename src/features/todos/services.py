@@ -5,7 +5,7 @@ from fastapi import Depends, HTTPException
 from features.common.query import SortOrder
 from features.users.services import UserService, get_user_service
 from logger import logger
-from sqlalchemy import case, func, select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 

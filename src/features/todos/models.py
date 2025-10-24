@@ -4,7 +4,7 @@ from sqlalchemy import ForeignKey
 from typing import TYPE_CHECKING, Optional
 
 if TYPE_CHECKING:
-    from src.features.users.models import User
+    from features.users.models import User
 
 
 class Todo(Base):

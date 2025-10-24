@@ -13,7 +13,7 @@ Asynchronous FastAPI starter that uses SQLAlchemy 2.0, Alembic migrations, and P
 
 ## Requirements
 
-- Python 3.14+
+- Python 3.11+
 - `pip` for installing dependencies
 - A database supported by SQLAlchemy (default examples use SQLite/PostgreSQL)
 
@@ -24,16 +24,11 @@ Asynchronous FastAPI starter that uses SQLAlchemy 2.0, Alembic migrations, and P
    git clone <your-fork-url> fastapi-template
    cd fastapi-template
    ```
-2. **Create a virtual environment (recommended)**
+2. **Install dependencies with UV**
    ```pwsh
-   python -m venv .venv
-   .\.venv\Scripts\Activate.ps1
+   uv sync
    ```
-3. **Install dependencies**
-   ```pwsh
-   pip install -r requirements.txt
-   ```
-4. **Configure environment variables**
+3. **Configure environment variables**
    Copy `.env.example` to `.env` (or create `.env`) and set at least `DB_URL`.
 
    ```env
@@ -64,6 +59,10 @@ Execute the asynchronous API tests (uses an in-memory database):
 ```pwsh
 pytest -v
 ```
+
+## Transaction Handling
+
+Mutating route handlers own the transaction boundary by opening `async with db.begin()` blocks before invoking their services. This keeps commits scoped to a single HTTP lifecycle and makes rollbacks predictable. The corresponding service methods expose an optional `flush` flag (defaulting to `True` for most creates and updates) so they can be reused inside larger workflows without forcing an early flush—pass `flush=False` when composing multiple operations inside an existing transaction.
 
 ## Database Migrations
 

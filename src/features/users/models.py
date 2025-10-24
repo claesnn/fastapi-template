@@ -3,7 +3,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from src.features.todos.models import Todo
+    from features.todos.models import Todo
 
 
 class User(Base):
