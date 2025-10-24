@@ -11,15 +11,15 @@ from sqlalchemy.orm import selectinload
 
 
 class TodoService:
-    def __init__(self, db: AsyncSession, userService: UserService):
+    def __init__(self, db: AsyncSession, user_service: UserService):
         self.db = db
-        self.userService = userService
+        self.user_service = user_service
 
     async def create(self, todo_create: TodoCreate) -> Todo:
         """Create a new todo item."""
         if todo_create.user_id is not None:
             # Verify that the user exists
-            await self.userService.get(todo_create.user_id)
+            await self.user_service.get(todo_create.user_id)
 
         todo = Todo(**todo_create.model_dump())
         self.db.add(todo)
