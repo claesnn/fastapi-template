@@ -1,4 +1,8 @@
-from pydantic import BaseModel, ConfigDict
+from enum import Enum
+
+from pydantic import BaseModel, ConfigDict, Field
+
+from features.common.query import BaseListQuery
 
 
 class TodoBase(BaseModel):
@@ -22,3 +26,16 @@ class TodoUpdate(BaseModel):
 class TodoRead(TodoBase):
     id: int
     model_config = ConfigDict(from_attributes=True)
+
+
+class TodoSortField(str, Enum):
+    id = "id"
+    title = "title"
+    completed = "completed"
+    user_id = "user_id"
+
+
+class TodoListParams(BaseListQuery):
+    completed: bool | None = Field(default=None)
+    user_id: int | None = Field(default=None, ge=1)
+    sort_by: TodoSortField = Field(default=TodoSortField.id)

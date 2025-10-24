@@ -1,9 +1,13 @@
-from fastapi import APIRouter, Depends, status
+from typing import Annotated
 
-from features.common.pagination import PaginatedResponse, PaginationQuery, paginate
+from fastapi import APIRouter, Depends, Query, status
+
+from features.common.pagination import PaginatedResponse, paginate
 
 from .services import UserService, get_user_service
-from .schemas.base import UserCreate, UserRead, UserUpdate
+from .schemas.base import UserCreate, UserListParams, UserRead, UserUpdate
+
+UserListQuery = Annotated[UserListParams, Query()]
 
 router = APIRouter(prefix="/users", tags=["users"])
 
@@ -26,7 +30,7 @@ async def get_user(
 
 @router.get("/", response_model=PaginatedResponse[UserRead])
 async def list_users(
-    pagination: PaginationQuery,
+    pagination: UserListQuery,
     user_service: UserService = Depends(get_user_service),
 ):
     users, total = await user_service.list(pagination)

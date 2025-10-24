@@ -1,4 +1,8 @@
-from pydantic import BaseModel, ConfigDict, EmailStr
+from enum import Enum
+
+from pydantic import BaseModel, ConfigDict, EmailStr, Field
+
+from features.common.query import BaseListQuery
 
 
 class UserBase(BaseModel):
@@ -22,3 +26,16 @@ class UserUpdate(BaseModel):
 class UserRead(UserBase):
     id: int
     model_config = ConfigDict(from_attributes=True)
+
+
+class UserSortField(str, Enum):
+    id = "id"
+    username = "username"
+    email = "email"
+
+
+class UserListParams(BaseListQuery):
+    username: str | None = Field(default=None, min_length=1)
+    email: str | None = Field(default=None, min_length=1)
+    is_active: bool | None = Field(default=None)
+    sort_by: UserSortField = Field(default=UserSortField.id)

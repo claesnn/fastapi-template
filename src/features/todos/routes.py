@@ -1,9 +1,13 @@
-from fastapi import APIRouter, Depends, status
+from typing import Annotated
 
-from features.common.pagination import PaginatedResponse, PaginationQuery, paginate
-from features.todos.schemas.relational import TodoReadWithUser
+from fastapi import APIRouter, Depends, Query, status
+
+from features.common.pagination import PaginatedResponse, paginate
 from .services import TodoService, get_todo_service
-from .schemas.base import TodoCreate, TodoRead, TodoUpdate
+from .schemas.base import TodoCreate, TodoListParams, TodoRead, TodoUpdate
+from features.todos.schemas.relational import TodoReadWithUser
+
+TodoListQuery = Annotated[TodoListParams, Query()]
 
 router = APIRouter(prefix="/todos", tags=["todos"])
 
@@ -18,7 +22,7 @@ async def create_todo(
 
 @router.get("/with-users", response_model=PaginatedResponse[TodoReadWithUser])
 async def list_todos_with_users(
-    pagination: PaginationQuery,
+    pagination: TodoListQuery,
     todo_service: TodoService = Depends(get_todo_service),
 ):
     todos, total = await todo_service.list_with_users(pagination)
@@ -35,7 +39,7 @@ async def get_todo(
 
 @router.get("/", response_model=PaginatedResponse[TodoRead])
 async def list_todos(
-    pagination: PaginationQuery,
+    pagination: TodoListQuery,
     todo_service: TodoService = Depends(get_todo_service),
 ):
     todos, total = await todo_service.list(pagination)

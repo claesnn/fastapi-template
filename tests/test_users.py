@@ -110,6 +110,49 @@ class TestUserEndpoints:
         assert "listuser2" in usernames
 
     @pytest.mark.asyncio
+    async def test_list_users_filters_and_sorting(self, client: AsyncClient):
+        """Filtering and sorting parameters should alter the response."""
+        users_data = [
+            {
+                "username": "inactive-one",
+                "email": "inactive1@example.com",
+                "full_name": "Inactive One",
+                "is_active": False,
+            },
+            {
+                "username": "inactive-two",
+                "email": "inactive2@example.com",
+                "full_name": "Inactive Two",
+                "is_active": False,
+            },
+            {
+                "username": "active-three",
+                "email": "active3@example.com",
+                "full_name": "Active Three",
+                "is_active": True,
+            },
+        ]
+
+        for user_data in users_data:
+            await client.post("/users/", json=user_data)
+
+        response = await client.get(
+            "/users/?is_active=false&username=inactive&sort_by=username&sort_order=desc"
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        usernames = [user["username"] for user in data["items"]]
+        assert usernames == ["inactive-two", "inactive-one"]
+
+        email_filter_response = await client.get("/users/?email=active3@example.com")
+
+        assert email_filter_response.status_code == 200
+        email_data = email_filter_response.json()
+        assert email_data["total"] == 1
+        assert email_data["items"][0]["username"] == "active-three"
+
+    @pytest.mark.asyncio
     async def test_list_users_page_size_too_large(self, client: AsyncClient):
         """Requesting a page size above the maximum should fail validation."""
         response = await client.get(f"/users/?page_size={MAX_PAGE_SIZE + 1}")

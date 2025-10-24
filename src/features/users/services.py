@@ -1,14 +1,16 @@
 from .models import User
-from .schemas.base import UserCreate, UserUpdate
+from .schemas.base import UserCreate, UserListParams, UserSortField, UserUpdate
 from database import get_db
 from fastapi import Depends, HTTPException
-from features.common.pagination import PaginationParams
+from features.common.query import SortOrder
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.sql.elements import ColumnElement
 
 
 class UserService:
+
     def __init__(self, db: AsyncSession):
         self.db = db
 
@@ -34,17 +36,22 @@ class UserService:
 
         return user
 
-    async def list(self, pagination: PaginationParams) -> tuple[list[User], int]:
-        total = await self.db.scalar(select(func.count()).select_from(User)) or 0
-        query = (
-            select(User)
-            .order_by(User.id)
-            .offset(pagination.offset)
-            .limit(pagination.page_size)
-        )
-        result = await self.db.scalars(query)
-        users = list(result)
-        return users, int(total)
+    async def list(self, params: UserListParams) -> tuple[list[User], int]:
+        filters = self._filters(params)
+
+        count_stmt = select(func.count()).select_from(User)
+        if filters:
+            count_stmt = count_stmt.where(*filters)
+        total = int(await self.db.scalar(count_stmt) or 0)
+
+        stmt = select(User)
+        if filters:
+            stmt = stmt.where(*filters)
+        stmt = stmt.order_by(self._ordering_column(params))
+        stmt = stmt.offset(params.offset).limit(params.page_size)
+
+        users = list(await self.db.scalars(stmt))
+        return users, total
 
     async def update(self, user_id: int, user_update: UserUpdate) -> User:
         user = await self.get(user_id)
@@ -69,6 +76,35 @@ class UserService:
 
         await self.db.delete(user)
         await self.db.commit()
+
+    def _filters(self, params: UserListParams) -> list[ColumnElement[bool]]:
+        clauses: list[ColumnElement[bool]] = []
+        if params.username:
+            clauses.append(
+                func.lower(User.username).like(self._normalize_like(params.username))
+            )
+        if params.email:
+            clauses.append(
+                func.lower(User.email).like(self._normalize_like(params.email))
+            )
+        if params.is_active is not None:
+            clauses.append(User.is_active == params.is_active)
+        return clauses
+
+    def _ordering_column(self, params: UserListParams):
+        if params.sort_by == UserSortField.username:
+            column = User.username
+        elif params.sort_by == UserSortField.email:
+            column = User.email
+        else:
+            column = User.id
+        if params.sort_order == SortOrder.desc:
+            return column.desc()
+        return column.asc()
+
+    @staticmethod
+    def _normalize_like(value: str) -> str:
+        return f"%{value.lower()}%"
 
 
 async def get_user_service(

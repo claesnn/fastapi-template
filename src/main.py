@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Depends
+from fastapi import FastAPI, Depends, HTTPException, status
 from pydantic import BaseModel
 from features.auth.bearer import get_current_user
 from logger import logger
@@ -17,11 +17,11 @@ app.add_middleware(StructlogRequestMiddleware)
 
 
 class StatusResponse(BaseModel):
-    status: Literal["ok", "error"]
+    status: Literal["ok"]
 
 
 @app.get("/", response_model=StatusResponse)
-async def status():
+async def read_status():
     await logger.ainfo("Status endpoint called")
     return {"status": "ok"}
 
@@ -33,7 +33,7 @@ async def health(db: AsyncSession = Depends(get_db)):
         return {"status": "ok"}
     except Exception as e:
         await logger.aerror("Health check failed", error=str(e))
-        return {"status": "error"}
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Database connection failed")
 
 
 app.include_router(todos_router)

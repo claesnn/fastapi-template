@@ -108,6 +108,69 @@ class TestTodoEndpoints:
         assert "Second Todo" in titles
 
     @pytest.mark.asyncio
+    async def test_list_todos_filter_by_completed(self, client: AsyncClient):
+        """Filtering by completion status should limit results."""
+        todos_data = [
+            {
+                "title": "Complete Todo",
+                "description": "Done",
+                "completed": True,
+                "user_id": None,
+            },
+            {
+                "title": "Incomplete Todo",
+                "description": "Not done",
+                "completed": False,
+                "user_id": None,
+            },
+        ]
+
+        for todo_data in todos_data:
+            await client.post("/todos/", json=todo_data)
+
+        response = await client.get("/todos/?completed=true")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["total"] == 1
+        assert len(data["items"]) == 1
+        assert data["items"][0]["title"] == "Complete Todo"
+        assert data["items"][0]["completed"] is True
+
+    @pytest.mark.asyncio
+    async def test_list_todos_sorting(self, client: AsyncClient):
+        """Sorting should reorder todos according to requested field/order."""
+        todos_data = [
+            {
+                "title": "Alpha",
+                "description": "First",
+                "completed": False,
+                "user_id": None,
+            },
+            {
+                "title": "Charlie",
+                "description": "Third",
+                "completed": False,
+                "user_id": None,
+            },
+            {
+                "title": "Bravo",
+                "description": "Second",
+                "completed": True,
+                "user_id": None,
+            },
+        ]
+
+        for todo_data in todos_data:
+            await client.post("/todos/", json=todo_data)
+
+        response = await client.get("/todos/?sort_by=title&sort_order=desc")
+
+        assert response.status_code == 200
+        titles = [todo["title"] for todo in response.json()["items"]]
+        assert titles == ["Charlie", "Bravo", "Alpha"]
+
+    @pytest.mark.asyncio
     async def test_list_todos_with_users(self, client: AsyncClient):
         """Test GET /todos/with-users - List all todos with user information."""
         # First create a user
