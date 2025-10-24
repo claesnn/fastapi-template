@@ -29,13 +29,16 @@ Asynchronous FastAPI starter that uses SQLAlchemy 2.0, Alembic migrations, and P
    uv sync
    ```
 3. **Configure environment variables**
-   Copy `.env.example` to `.env` (or create `.env`) and set at least `DB_URL`.
+   Copy `.env.example` to `.env` (or create `.env`) and set at least `db_url`.
 
    ```env
-   DB_URL=sqlite+aiosqlite:///./data.db
+   db_url=sqlite+aiosqlite:///./data.db
+   cors_allow_origins=http://localhost:3000
    ```
 
    The `settings.Settings` class reads from `.env` via `pydantic-settings`.
+
+   CORS values accept comma-separated lists (e.g. `cors_allow_origins=http://localhost:3000,http://localhost:5173`). Leave the defaults if you want to allow all methods/headers during development.
 
 ## Running the Application
 
@@ -144,3 +147,9 @@ Use `/todos/with-users` when you need eager-loaded user data alongside todos.
 - Use `fastapi dev` for auto-reload with rapid prototyping.
 - Override dependencies in tests via `app.dependency_overrides` as demonstrated in `tests/conftest.py`.
 - Enable structured logging aggregation by shipping stdout to your log collector of choice.
+
+## CORS Configuration
+
+- CORS is enabled globally via FastAPI's `CORSMiddleware`. Values come from `settings`, so update `.env` to tighten access for production.
+- Supported keys: `cors_allow_origins`, `cors_allow_methods`, `cors_allow_headers`, `cors_expose_headers`, `cors_allow_credentials`, `cors_max_age`.
+- Provide comma-separated lists for the array values or keep `*` to allow everything while prototyping.
