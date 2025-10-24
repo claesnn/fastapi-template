@@ -13,7 +13,7 @@ Asynchronous FastAPI starter that uses SQLAlchemy 2.0, Alembic migrations, and P
 
 ## Requirements
 
-- Python 3.11+
+- Python 3.14+
 - `pip` for installing dependencies
 - A database supported by SQLAlchemy (default examples use SQLite/PostgreSQL)
 

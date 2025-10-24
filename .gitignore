@@ -76,6 +76,8 @@ coverage.xml
 *.db
 *.db-journal
 *.sqlite3
+**/*.db
+**/*.sqlite3
 
 # macOS and Windows
 .DS_Store
