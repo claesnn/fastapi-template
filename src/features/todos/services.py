@@ -16,7 +16,7 @@ class TodoService:
         self.db = db
         self.user_service = user_service
 
-    async def create(self, todo_create: TodoCreate) -> Todo:
+    async def create(self, todo_create: TodoCreate, *, flush: bool = True) -> Todo:
         """Create a new todo item."""
         if todo_create.user_id is not None:
             # Verify that the user exists
@@ -24,7 +24,8 @@ class TodoService:
 
         todo = Todo(**todo_create.model_dump())
         self.db.add(todo)
-        await self.db.commit()
+        if flush:
+            await self.db.flush()
         await logger.ainfo(f"Created todo item with id {todo.id}", todo_id=todo.id)
         return todo
 
@@ -62,14 +63,17 @@ class TodoService:
     ) -> tuple[list[Todo], int]:
         return await self.list(params, include_user=True)
 
-    async def update(self, todo_id: int, todo_update: TodoUpdate) -> Todo:
+    async def update(
+        self, todo_id: int, todo_update: TodoUpdate, *, flush: bool = False
+    ) -> Todo:
         todo = await self.get(todo_id)
 
         for field, value in todo_update.model_dump(exclude_unset=True).items():
             setattr(todo, field, value)
 
         self.db.add(todo)
-        await self.db.commit()
+        if flush:
+            await self.db.flush()
 
         return todo
 
@@ -78,7 +82,6 @@ class TodoService:
         todo = await self.get(todo_id)
 
         await self.db.delete(todo)
-        await self.db.commit()
 
     def _filters(self, params: TodoListParams) -> list:
         clauses = []

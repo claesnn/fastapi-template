@@ -14,13 +14,14 @@ class UserService:
     def __init__(self, db: AsyncSession):
         self.db = db
 
-    async def create(self, user_create: UserCreate) -> User:
+    async def create(self, user_create: UserCreate, *, flush: bool = True) -> User:
         """Create a new user."""
         user = User(**user_create.model_dump())
         self.db.add(user)
 
         try:
-            await self.db.commit()
+            if flush:
+                await self.db.flush()
         except IntegrityError:
             raise HTTPException(
                 status_code=400, detail="Username or email already exists"
@@ -53,7 +54,9 @@ class UserService:
         users = list(await self.db.scalars(stmt))
         return users, total
 
-    async def update(self, user_id: int, user_update: UserUpdate) -> User:
+    async def update(
+        self, user_id: int, user_update: UserUpdate, *, flush: bool = True
+    ) -> User:
         user = await self.get(user_id)
 
         for field, value in user_update.model_dump(exclude_unset=True).items():
@@ -62,7 +65,8 @@ class UserService:
         self.db.add(user)
 
         try:
-            await self.db.commit()
+            if flush:
+                await self.db.flush()
         except IntegrityError:
             raise HTTPException(
                 status_code=400, detail="Username or email already exists"
@@ -75,7 +79,6 @@ class UserService:
         user = await self.get(user_id)
 
         await self.db.delete(user)
-        await self.db.commit()
 
     def _filters(self, params: UserListParams) -> list[ColumnElement[bool]]:
         clauses: list[ColumnElement[bool]] = []
