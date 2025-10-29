@@ -1,127 +1,99 @@
 # FastAPI Template
 
-Asynchronous FastAPI starter that uses SQLAlchemy 2.0, Alembic migrations, and Pydantic v2 schemas to deliver CRUD APIs for users and todos. The project is structured for easy feature expansion, observability with JSON logging, and automated testing.
+Asynchronous FastAPI starter that combines SQLAlchemy 2.0, Alembic migrations, and Pydantic v2 schemas to deliver modular CRUD APIs for users and todos while enforcing bearer authentication and emitting structured JSON logs.
 
-## Features
+## Highlights
+- Global HTTP bearer guard (`Authorization: Bearer Nina`) backed by `HTTPBearer` and reusable auth helpers.
+- Modular domain packages in `src/features/<domain>` with aligned `models`, `schemas`, `services`, and `routes` modules.
+- SQLAlchemy 2.0 async stack with explicit `async with db.begin()` transaction boundaries.
+- Structlog-powered request middleware that stamps each response with an `X-Request-ID` and logs duration, status, and endpoint.
+- Shared pagination helpers that return a consistent `{items,total,page,page_size}` payload.
+- Health and status probes (`GET /` and `GET /health`) for readiness checks.
 
-- Async FastAPI application with modular `features/*` packages for domain isolation
-- SQLAlchemy 2.0 ORM models with async sessions and relationship loading helpers
-- Alembic migrations wired to the shared settings module for database upgrades
-- Pydantic v2 schemas (including relational projections) to drive request/response validation
-- Structlog JSON logging ready for production aggregators
-- Pytest + httpx test suite with an in-memory async SQLite database fixture
-
-## Requirements
-
+## Prerequisites
 - Python 3.11+
-- `pip` for installing dependencies
-- A database supported by SQLAlchemy (default examples use SQLite/PostgreSQL)
+- SQLite (default), or any SQLAlchemy-supported database URL for `settings.db_url`
+- Optional: [uv](https://github.com/astral-sh/uv) for fast dependency management
 
-## Getting Started
-
-1. **Clone and enter the project**
-   ```pwsh
+## Quickstart
+1. **Clone the repository**
+   ```bash
    git clone <your-fork-url> fastapi-template
    cd fastapi-template
    ```
-2. **Install dependencies with UV**
-   ```pwsh
+2. **Create a virtual environment**
+   ```bash
+   python -m venv .venv
+   source .venv/bin/activate
+   ```
+3. **Install dependencies**
+   ```bash
+   pip install -e .
+   # Install test tooling if you plan to run the suite
+   pip install pytest pytest-asyncio
+   ```
+   Or, if you use `uv`:
+   ```bash
    uv sync
    ```
-3. **Configure environment variables**
-   Copy `.env.example` to `.env` (or create `.env`) and set at least `db_url`.
 
-   ```env
-   db_url=sqlite+aiosqlite:///./data.db
-   cors_allow_origins=http://localhost:3000
-   ```
-
-   The `settings.Settings` class reads from `.env` via `pydantic-settings`.
-
-   CORS values accept comma-separated lists (e.g. `cors_allow_origins=http://localhost:3000,http://localhost:5173`). Leave the defaults if you want to allow all methods/headers during development.
+## Environment Configuration
+Create `.env` in the project root (the `Settings` object in `src/settings.py` loads it automatically). At minimum set a database URL; SQLite is convenient for local work:
+```env
+db_url=sqlite+aiosqlite:///./data.db
+log_level=DEBUG
+cors_allow_origins=http://localhost:3000,http://localhost:5173
+```
+Comma-separated values are expanded into lists for the CORS settings.
 
 ## Running the Application
-
-1. Apply migrations (optional for SQLite, required for persisted databases):
-   ```pwsh
+1. **Apply migrations** (run from `src/` so Alembic can locate `env.py`):
+   ```bash
    cd src
    alembic upgrade head
    ```
-2. Start the FastAPI app:
-   ```pwsh
+2. **Start the API with auto-reload**:
+   ```bash
    fastapi dev
    ```
-3. The API enforces a simple bearer token check. Supply `Authorization: Bearer Nina` on every request (including Swagger “Authorize”) to avoid `403` responses.
-4. Visit the interactive docs at `http://localhost:8000/docs` or the alternative schema at `http://localhost:8000/redoc`.
+3. **Authenticate every request** with `Authorization: Bearer Nina` (including the Swagger “Authorize” dialog) to avoid `401` responses.
+4. Visit `http://localhost:8000/docs` for the interactive schema or `http://localhost:8000/redoc` for an alternative view.
 
-> **Note:** The included logging configuration emits ISO-timestamped JSON to stdout via Structlog.
-
-## Running Tests
-
-Execute the asynchronous API tests (uses an in-memory database):
-```pwsh
-pytest -v
-```
-
-## Transaction Handling
-
-Mutating route handlers own the transaction boundary by opening `async with db.begin()` blocks before invoking their services. This keeps commits scoped to a single HTTP lifecycle and makes rollbacks predictable. The corresponding service methods expose an optional `flush` flag (defaulting to `True` for most creates and updates) so they can be reused inside larger workflows without forcing an early flush—pass `flush=False` when composing multiple operations inside an existing transaction.
+Logs are JSON-formatted and include request metadata emitted by `StructlogRequestMiddleware`.
 
 ## Database Migrations
-
-- Create a new revision:
-  ```pwsh
+- Create a revision:
+  ```bash
   cd src
   alembic revision -m "add new table"
   ```
-- Apply the latest migrations:
-  ```pwsh
+- Apply the latest migration:
+  ```bash
   alembic upgrade head
   ```
 
-Alembic loads the SQLAlchemy URL from `settings.db_url`, so keep `.env` in sync.
+Alembic reads the SQLAlchemy URL from `settings.db_url`, so keep `.env` in sync with your target database.
 
-## Project Layout
-
-```
-.
-├── requirements.txt
-├── src
-│   ├── main.py              # FastAPI app & router wiring
-│   ├── settings.py          # Pydantic settings (reads DB_URL)
-│   ├── database.py          # Async engine, session factory, Base
-│   ├── logger.py            # Structlog JSON logger
-│   ├── features
-│   │   ├── users            # User domain: models, routes, services, schemas
-│   │   └── todos            # Todo domain: models, routes, services, schemas
-│   └── alembic              # Migration environment & versions
-└── tests
-    ├── test_users.py        # Async API tests for user endpoints
-    └── test_todos.py        # Async API tests for todo endpoints
-```
-
-## API Overview
+## API Surface
+- `GET /` – Lightweight status check that logs a debug entry.
+- `GET /health` – Pings the database; returns `500` if the connection fails.
 
 ### Users
-- `POST /users/` – Create a user
-- `GET /users/{user_id}` – Retrieve a user
-- `GET /users/` – List users
-- `PATCH /users/{user_id}` – Update partial fields
-- `DELETE /users/{user_id}` – Remove a user
+- `POST /users/` – Create a user (transactional)
+- `GET /users/{user_id}` – Retrieve a single user
+- `GET /users/` – List users with pagination
+- `PATCH /users/{user_id}` – Partially update a user (transactional)
+- `DELETE /users/{user_id}` – Remove a user (transactional)
 
 ### Todos
-- `POST /todos/` – Create a todo
+- `POST /todos/` – Create a todo, verifying referenced users exist (transactional)
 - `GET /todos/{todo_id}` – Retrieve a todo
-- `GET /todos/` – List todos
-- `GET /todos/with-users` – List todos with optional user details
-- `PATCH /todos/{todo_id}` – Update a todo
-- `DELETE /todos/{todo_id}` – Remove a todo
+- `GET /todos/` – List todos with pagination
+- `GET /todos/with-users` – List todos and optionally eager-load related users
+- `PATCH /todos/{todo_id}` – Update a todo (transactional)
+- `DELETE /todos/{todo_id}` – Remove a todo (transactional)
 
-Todos can optionally be linked to users via `user_id`, and the `TodoService` verifies the referenced user exists before insertion.
-
-### Pagination
-Collection endpoints accept `page` (default `1`) and `page_size` (default `20`, max `100`). Responses return a consistent envelope:
-
+Paginated responses return:
 ```json
 {
   "items": [...],
@@ -130,26 +102,47 @@ Collection endpoints accept `page` (default `1`) and `page_size` (default `20`, 
   "page_size": 20
 }
 ```
+Use the `page` and `page_size` query parameters (max `100`) to control pagination.
 
-Use `/todos/with-users` when you need eager-loaded user data alongside todos.
+## Testing
+Run the async API suite (uses an in-memory SQLite database) after activating your virtual environment:
+```bash
+pytest -v --maxfail=1
+```
+Fixtures in `tests/conftest.py` handle app bootstrapping, dependency overrides, and injecting the required bearer token so integration tests mirror real requests.
+
+## Project Layout
+```
+.
+├── AGENTS.md
+├── pyproject.toml
+├── uv.lock
+├── src
+│   ├── main.py            # FastAPI app & router wiring
+│   ├── middleware.py      # Structlog request middleware
+│   ├── settings.py        # Pydantic settings (loads .env)
+│   ├── database.py        # Async engine, session factory, DeclarativeBase
+│   ├── logger.py          # Structlog configuration
+│   ├── alembic            # Migration environment & versions
+│   └── features
+│       ├── auth           # HTTP bearer dependency
+│       ├── common         # Pagination and shared utilities
+│       ├── todos          # Todo domain models/routes/services/schemas
+│       └── users          # User domain models/routes/services/schemas
+└── tests
+    ├── conftest.py        # Async test fixtures & client factory
+    ├── test_todos.py
+    └── test_users.py
+```
 
 ## Extending the Template
+- Add a new folder under `src/features/<domain>` and mirror the existing `models`, `schemas`, `services`, and `routes` structure.
+- Import new models in `src/alembic/env.py` so Alembic picks them up, then generate migrations.
+- Register the router in `src/main.py` to expose endpoints.
+- Cover new behaviors with tests in `tests/` using the provided fixtures.
+- Wrap multi-operation writes in a shared `async with db.begin()` block and pass `flush=False` into services that participate in wider transactions.
 
-- Add new feature folders under `src/features/<domain>` following the patterns for models, schemas, services, and routes.
-- Register new routers in `src/main.py`.
-- Use the existing dependency injection helpers to access the async session or cross-feature services.
-- Update tests to cover new endpoints using the fixtures in `tests/conftest.py`.
-- Add models import to `src/alembic/env.py`
-- To migrate new models: Make revisions and upgrade database
-
-## Tooling Tips
-
-- Use `fastapi dev` for auto-reload with rapid prototyping.
-- Override dependencies in tests via `app.dependency_overrides` as demonstrated in `tests/conftest.py`.
-- Enable structured logging aggregation by shipping stdout to your log collector of choice.
-
-## CORS Configuration
-
-- CORS is enabled globally via FastAPI's `CORSMiddleware`. Values come from `settings`, so update `.env` to tighten access for production.
-- Supported keys: `cors_allow_origins`, `cors_allow_methods`, `cors_allow_headers`, `cors_expose_headers`, `cors_allow_credentials`, `cors_max_age`.
-- Provide comma-separated lists for the array values or keep `*` to allow everything while prototyping.
+## Tooling Notes
+- `fastapi dev` watches the project for code changes and reloads automatically.
+- Structured logs bind request metadata (method, path, status, duration, request id) so collectors can index and search easily.
+- Global CORS settings are read from `.env`; provide comma-separated lists for origins, headers, or methods when tightening access for different environments.
