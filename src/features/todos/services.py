@@ -11,7 +11,6 @@ from sqlalchemy.orm import selectinload
 
 
 class TodoService:
-
     def __init__(self, db: AsyncSession, user_service: UserService):
         self.db = db
         self.user_service = user_service
@@ -58,14 +57,16 @@ class TodoService:
         todos = list(await self.db.scalars(stmt))
         return todos, total
 
-    async def list_with_users(
-        self, params: TodoListParams
-    ) -> tuple[list[Todo], int]:
+    async def list_with_users(self, params: TodoListParams) -> tuple[list[Todo], int]:
         return await self.list(params, include_user=True)
 
     async def update(
         self, todo_id: int, todo_update: TodoUpdate, *, flush: bool = False
     ) -> Todo:
+        if todo_update.user_id is not None:
+            # Verify that the user exists
+            await self.user_service.get(todo_update.user_id)
+
         todo = await self.get(todo_id)
 
         for field, value in todo_update.model_dump(exclude_unset=True).items():
