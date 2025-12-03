@@ -17,4 +17,4 @@ class Todo(Base):
     user_id: Mapped[Optional[int]] = mapped_column(
         ForeignKey("users.id"), nullable=True
     )
-    user: Mapped[Optional["User"]] = relationship(back_populates="todos")
+    user: Mapped[Optional["User"]] = relationship(back_populates="todos", lazy="noload")

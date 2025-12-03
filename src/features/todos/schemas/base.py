@@ -35,7 +35,12 @@ class TodoSortField(str, Enum):
     user_id = "user_id"
 
 
+class TodoExpandField(str, Enum):
+    user = "user"
+
+
 class TodoListParams(BaseListQuery):
     completed: bool | None = Field(default=None)
     user_id: int | None = Field(default=None, ge=1)
     sort_by: TodoSortField = Field(default=TodoSortField.id)
+    expand: list[TodoExpandField] = Field(default=[])

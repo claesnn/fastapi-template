@@ -172,7 +172,7 @@ class TestTodoEndpoints:
 
     @pytest.mark.asyncio
     async def test_list_todos_with_users(self, client: AsyncClient):
-        """Test GET /todos/with-users - List all todos with user information."""
+        """Test GET /todos/?expand=user - List all todos with user information."""
         # First create a user
         user_data = {
             "username": "todouser",
@@ -201,8 +201,8 @@ class TestTodoEndpoints:
         await client.post("/todos/", json=todo_with_user)
         await client.post("/todos/", json=todo_without_user)
 
-        # Get all todos with users
-        response = await client.get("/todos/with-users")
+        # Get all todos with users expanded
+        response = await client.get("/todos/?expand=user")
 
         assert response.status_code == 200
         data = response.json()

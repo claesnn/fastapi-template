@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from .models import User
 from .schemas.base import UserCreate, UserListParams, UserSortField, UserUpdate
 from database import get_db
@@ -10,7 +12,6 @@ from sqlalchemy.sql.elements import ColumnElement
 
 
 class UserService:
-
     def __init__(self, db: AsyncSession):
         self.db = db
 

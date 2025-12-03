@@ -6,8 +6,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from database import get_db
 from features.common.pagination import PaginatedResponse, paginate
 from .services import TodoService, get_todo_service
-from .schemas.base import TodoCreate, TodoListParams, TodoRead, TodoUpdate
-from features.todos.schemas.relational import TodoReadWithUser
+from .schemas.base import (
+    TodoCreate,
+    TodoExpandField,
+    TodoListParams,
+    TodoRead,
+    TodoUpdate,
+)
+from features.todos.schemas.relational import TodoReadFull
 
 TodoListQuery = Annotated[TodoListParams, Query()]
 
@@ -25,15 +31,6 @@ async def create_todo(
     return todo
 
 
-@router.get("/with-users", response_model=PaginatedResponse[TodoReadWithUser])
-async def list_todos_with_users(
-    pagination: TodoListQuery,
-    todo_service: TodoService = Depends(get_todo_service),
-):
-    todos, total = await todo_service.list_with_users(pagination)
-    return paginate(todos, total, pagination)
-
-
 @router.get("/{todo_id}", response_model=TodoRead)
 async def get_todo(
     todo_id: int,
@@ -42,13 +39,14 @@ async def get_todo(
     return await todo_service.get(todo_id)
 
 
-@router.get("/", response_model=PaginatedResponse[TodoRead])
+@router.get("/", response_model=PaginatedResponse[TodoReadFull])
 async def list_todos(
-    pagination: TodoListQuery,
+    params: TodoListQuery,
     todo_service: TodoService = Depends(get_todo_service),
 ):
-    todos, total = await todo_service.list(pagination)
-    return paginate(todos, total, pagination)
+    include_user = TodoExpandField.user in params.expand
+    todos, total = await todo_service.list(params, include_user=include_user)
+    return paginate(todos, total, params)
 
 
 @router.patch("/{todo_id}", response_model=TodoRead)

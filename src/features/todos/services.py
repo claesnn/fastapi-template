@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from .models import Todo
 from .schemas.base import TodoCreate, TodoListParams, TodoSortField, TodoUpdate
 from database import get_db
@@ -56,9 +58,6 @@ class TodoService:
 
         todos = list(await self.db.scalars(stmt))
         return todos, total
-
-    async def list_with_users(self, params: TodoListParams) -> tuple[list[Todo], int]:
-        return await self.list(params, include_user=True)
 
     async def update(
         self, todo_id: int, todo_update: TodoUpdate, *, flush: bool = False
