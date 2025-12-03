@@ -30,7 +30,7 @@ async def get_user(
     user_id: int,
     user_service: UserService = Depends(get_user_service),
 ):
-    return await user_service.get(user_id)
+    return await user_service.get_or_404(user_id)
 
 
 @router.get("/", response_model=PaginatedResponse[UserRead])

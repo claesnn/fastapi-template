@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from typing import List
 from .models import Todo
 from .schemas.base import TodoCreate, TodoListParams, TodoSortField, TodoUpdate
 from database import get_db
@@ -9,7 +10,8 @@ from features.users.services import UserService, get_user_service
 from logger import logger
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
+from sqlalchemy.orm import joinedload, selectinload
+from sqlalchemy.sql.elements import ColumnElement
 
 
 class TodoService:
@@ -20,8 +22,7 @@ class TodoService:
     async def create(self, todo_create: TodoCreate, *, flush: bool = True) -> Todo:
         """Create a new todo item."""
         if todo_create.user_id is not None:
-            # Verify that the user exists
-            await self.user_service.get(todo_create.user_id)
+            await self.user_service.get_or_404(todo_create.user_id)
 
         todo = Todo(**todo_create.model_dump())
         self.db.add(todo)
@@ -30,12 +31,19 @@ class TodoService:
         await logger.ainfo(f"Created todo item with id {todo.id}", todo_id=todo.id)
         return todo
 
-    async def get(self, todo_id: int) -> Todo:
+    async def get_or_404(self, todo_id: int) -> Todo:
+        """Get a todo by ID or raise 404."""
         todo = await self.db.get(Todo, todo_id)
-
         if not todo:
             raise HTTPException(status_code=404, detail="Todo not found")
+        return todo
 
+    async def get(self, todo_id: int) -> Todo:
+        """Get a todo with relationships for API responses."""
+        stmt = select(Todo).where(Todo.id == todo_id).options(joinedload(Todo.user))
+        todo = await self.db.scalar(stmt)
+        if not todo:
+            raise HTTPException(status_code=404, detail="Todo not found")
         return todo
 
     async def list(
@@ -63,10 +71,9 @@ class TodoService:
         self, todo_id: int, todo_update: TodoUpdate, *, flush: bool = False
     ) -> Todo:
         if todo_update.user_id is not None:
-            # Verify that the user exists
-            await self.user_service.get(todo_update.user_id)
+            await self.user_service.get_or_404(todo_update.user_id)
 
-        todo = await self.get(todo_id)
+        todo = await self.get_or_404(todo_id)
 
         for field, value in todo_update.model_dump(exclude_unset=True).items():
             setattr(todo, field, value)
@@ -79,12 +86,12 @@ class TodoService:
 
     async def delete(self, todo_id: int) -> None:
         """Delete a todo item."""
-        todo = await self.get(todo_id)
+        todo = await self.get_or_404(todo_id)
 
         await self.db.delete(todo)
 
-    def _filters(self, params: TodoListParams) -> list:
-        clauses = []
+    def _filters(self, params: TodoListParams) -> List[ColumnElement[bool]]:
+        clauses: List[ColumnElement[bool]] = []
         if params.completed is not None:
             clauses.append(Todo.completed == params.completed)
         if params.user_id is not None:

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from typing import List
 from .models import User
 from .schemas.base import UserCreate, UserListParams, UserSortField, UserUpdate
 from database import get_db
@@ -30,7 +31,7 @@ class UserService:
 
         return user
 
-    async def get(self, user_id: int) -> User:
+    async def get_or_404(self, user_id: int) -> User:
         user = await self.db.get(User, user_id)
 
         if not user:
@@ -58,7 +59,7 @@ class UserService:
     async def update(
         self, user_id: int, user_update: UserUpdate, *, flush: bool = True
     ) -> User:
-        user = await self.get(user_id)
+        user = await self.get_or_404(user_id)
 
         for field, value in user_update.model_dump(exclude_unset=True).items():
             setattr(user, field, value)
@@ -77,12 +78,12 @@ class UserService:
 
     async def delete(self, user_id: int) -> None:
         """Delete a user."""
-        user = await self.get(user_id)
+        user = await self.get_or_404(user_id)
 
         await self.db.delete(user)
 
-    def _filters(self, params: UserListParams) -> list[ColumnElement[bool]]:
-        clauses: list[ColumnElement[bool]] = []
+    def _filters(self, params: UserListParams) -> List[ColumnElement[bool]]:
+        clauses: List[ColumnElement[bool]] = []
         if params.username:
             clauses.append(
                 func.lower(User.username).like(self._normalize_like(params.username))

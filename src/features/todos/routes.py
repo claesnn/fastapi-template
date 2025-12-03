@@ -31,7 +31,7 @@ async def create_todo(
     return todo
 
 
-@router.get("/{todo_id}", response_model=TodoRead)
+@router.get("/{todo_id}", response_model=TodoReadFull)
 async def get_todo(
     todo_id: int,
     todo_service: TodoService = Depends(get_todo_service),
